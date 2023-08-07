@@ -104,6 +104,10 @@ int main(int argc, char** argv) {
   bool print_cycles = false;
   char ** htif_argv = NULL;
   int verilog_plusargs_legal = 1;
+  std::ofstream activationDump;
+  std::ofstream partitionDump;
+  activationDump.open ("activationDump.txt");
+  partitionDump.open ("partitionDump.txt");
 
   while (1) {
     static struct option long_options[] = {
@@ -236,15 +240,27 @@ done_processing:
   int sync_reset_cycles = 10;
 
   while (trace_count < max_cycles) {
+    std::cout<<trace_count<<" : v2\n";
     if (done_reset && (dtm->done() || tile->io_success))
       break;
     tile->reset = UInt<1>(trace_count < async_reset_cycles + sync_reset_cycles);
     done_reset = !tile->reset;
     tile->eval(true, verbose, done_reset);
+    for (int i=0; i<51060; i++){
+        activationDump << SIGcounts[i] << "\t";
+    }
+    activationDump << "\n";
+    for (int i=0; i<1598; i++){
+        partitionDump << tile->PARTflags[i] << "\t";
+    }
+    partitionDump << "\n";
+    activationDump << "\n";
     tick_dtm(tile, done_reset);
     trace_count++;
+    std::cout<<"\n";
   }
-
+  activationDump.close();
+  partitionDump.close();
   if (dtm->exit_code()) {
     fprintf(stderr, "*** FAILED *** via dtm (code = %d, seed %d) after %" PRIu64 " cycles\n", dtm->exit_code(), random_seed, trace_count);
     ret = dtm->exit_code();

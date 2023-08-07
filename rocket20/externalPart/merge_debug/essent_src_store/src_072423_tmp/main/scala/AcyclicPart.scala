@@ -18,8 +18,9 @@ class AcyclicPart(val mg: MergeGraph, excludeSet: Set[NodeID]) extends LazyLoggi
 
   def partsRemaining() = (mg.mergeIDToMembers.keys.toSet - excludeSet).size
 
-  def findSmallParts(smallPartCutoff: Int) = mg.mergeIDToMembers.keys.toSeq filter {
-    id => (mg.nodeSize(id) < smallPartCutoff) && (!excludeSet.contains(id)) && (!clustersToKeep.contains(id))
+  def findSmallParts(smallPartCutoff: Int): Seq[NodeID] = {
+    val smallIDs = mg.mergeIDToMembers.keys.toSeq filter { id => (mg.nodeSize(id) < smallPartCutoff) && (!excludeSet.contains(id)) && (!clustersToKeep.contains(id))}
+    return smallIDs.sorted.reverse
   }
 
   def perfomMergesIfPossible(mergesToConsider: Seq[Seq[NodeID]]) = {
