@@ -80,7 +80,7 @@ class graphInfo{
         std::cout << "\n----------f?----------\n";
         std::cout << append << "\n\n";
         std::ofstream myfile;
-        myfile.open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/071923_mergeSmallParts_merges_cpp",
+        myfile.open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/080623_mergeSmallPartsDown_merges_cpp",
             std::ios_base::app);
         myfile << "mergeIDToMembers\n";
         for( const auto &p : mergeIDToMembers){
@@ -105,7 +105,7 @@ class graphInfo{
         std::cout << "\n----------f?----------\n";
         std::cout << append << "\n\n";
         std::ofstream myfile;
-        myfile.open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/071923_mergeSmallParts_neighs_cpp",
+        myfile.open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/080623_mergeSmallPartsDown_neighs_cpp",
             std::ios_base::app);
         myfile << "inNeigh\n";
         for(int i=0; i<inNeigh.size(); i++){
@@ -130,31 +130,46 @@ class graphInfo{
     //-------------------------------------------------------
     //helper for mergeNodesMutably by chatGPT
     std::vector<int> combineInNeigh( std::vector<int>& idsToMerge,  std::vector<std::vector<int>>& IONeigh, int mergeID) {
-        std::vector<int> combinedInNeigh;
+        std::set<int> combinedInNeigh;
         
+        //080523 bug?
+        // // for (const auto& id : idsToMerge) {
+        // //     combinedInNeigh.insert(combinedInNeigh.end(), inNeigh[id].begin(), inNeigh[id].end());
+        // // }
+        // //BUG 071723: need to diff w/ mergeID
         // for (const auto& id : idsToMerge) {
-        //     combinedInNeigh.insert(combinedInNeigh.end(), inNeigh[id].begin(), inNeigh[id].end());
+        //     for (const auto& value : IONeigh[id]) {
+        //         if (value != mergeID) {
+        //             combinedInNeigh.push_back(value);
+        //         }
+        //     }
         // }
-        //BUG 071723: need to diff w/ mergeID
+        
+        // std::sort(combinedInNeigh.begin(), combinedInNeigh.end());
+        // auto combinedInNeighEnd = std::unique(combinedInNeigh.begin(), combinedInNeigh.end());
+        
+        // std::vector<int> diff;
+        // std::set_difference(combinedInNeigh.begin(), combinedInNeighEnd, idsToMerge.begin(), idsToMerge.end(),
+        //                     std::back_inserter(diff));
+        
+        // return diff;
+
         for (const auto& id : idsToMerge) {
             for (const auto& value : IONeigh[id]) {
-                if (value != mergeID) {
-                    combinedInNeigh.push_back(value);
+                if (value != mergeID && (std::find(idsToMerge.begin(), idsToMerge.end(), value) == idsToMerge.end())) {
+                    combinedInNeigh.insert(value);
                 }
             }
         }
-        
-        std::sort(combinedInNeigh.begin(), combinedInNeigh.end());
-        auto combinedInNeighEnd = std::unique(combinedInNeigh.begin(), combinedInNeigh.end());
-        
-        std::vector<int> diff;
-        std::set_difference(combinedInNeigh.begin(), combinedInNeighEnd, idsToMerge.begin(), idsToMerge.end(),
-                            std::back_inserter(diff));
-        
-        return diff;
+        std::vector<int> combinedInNeighVec(combinedInNeigh.begin(), combinedInNeigh.end());
+        std::sort(combinedInNeighVec.begin(), combinedInNeighVec.end());
+        return combinedInNeighVec;
     }
     void mergeNeigh(NodeID outNeighID, const std::vector<NodeID>& idsToRemove, NodeID mergedID, std::vector<std::vector<int>>& IONeigh) {
         auto& neigh = IONeigh[outNeighID];
+        // for(auto i : idsToRemove){
+        //     std::cout << i;
+        // }
         neigh.erase(std::remove_if(neigh.begin(), neigh.end(), [&](NodeID id) {
             return std::find(idsToRemove.begin(), idsToRemove.end(), id) != idsToRemove.end();
         }), neigh.end());
@@ -225,6 +240,7 @@ class graphInfo{
             // Merge nodes mutably
             std::vector<NodeID> sources = members;
             sources.erase(std::remove(sources.begin(), sources.end(), mergeID), sources.end());
+            std::sort(sources.begin(), sources.end(), [](int a, int b) { return a > b; });
             mergeNodesMutably(mergeID, sources);
         }
     }
@@ -306,6 +322,39 @@ class graphInfo{
         return extPathExists(Set{source}, Set{dest});
     }
 
+    bool traverseUntilIntersect(const Set& frontier, const Set reached, const Set& destSet) {
+        if (frontier.empty()) {
+            return false;
+        } else {
+            Set nextFrontier;
+            for (const auto& node : frontier) {
+                if(node > outNeigh.size()){
+                    std::cout << "break?";
+                }
+                const auto& neighbors = outNeigh[node];
+                for (const auto& neigh : neighbors) {
+                    if (reached.find(neigh) == reached.end()) {
+                        nextFrontier.insert(neigh);
+                    }
+                }
+            }
+            Set intersection;
+            for (const auto& node : nextFrontier) {
+                if (destSet.find(node) != destSet.end()) {
+                    intersection.insert(node);
+                }
+            }
+            if (!intersection.empty()) {
+                return true;
+            } else {
+                Set nextReached;
+                nextReached.insert(reached.begin(), reached.end());
+                nextReached.insert(nextFrontier.begin(), nextFrontier.end());
+                return traverseUntilIntersect(nextFrontier, nextReached, destSet);
+            }
+        }
+    };
+
     bool extPathExists(const Set& sourceSet, const Set& destSet) {
         Set sourcesOnFringe;
         for (const auto& id : sourceSet) {
@@ -331,37 +380,8 @@ class graphInfo{
             }
         }
 
-        std::function<bool(Set, Set)> traverseUntilIntersect = [&](Set frontier, Set reached) -> bool {
-            if (frontier.empty()) {
-                return false;
-            } else {
-                Set nextFrontier;
-                for (const auto& node : frontier) {
-                    const auto& neighbors = outNeigh[node];
-                    for (const auto& neigh : neighbors) {
-                        if (reached.find(neigh) == reached.end()) {
-                            nextFrontier.insert(neigh);
-                        }
-                    }
-                }
-                Set intersection;
-                for (const auto& node : nextFrontier) {
-                    if (destSet.find(node) != destSet.end()) {
-                        intersection.insert(node);
-                    }
-                }
-                if (!intersection.empty()) {
-                    return true;
-                } else {
-                    Set nextReached;
-                    nextReached.insert(reached.begin(), reached.end());
-                    nextReached.insert(nextFrontier.begin(), nextFrontier.end());
-                    return traverseUntilIntersect(nextFrontier, reached);
-                }
-            }
-        };
 
-        return traverseUntilIntersect(startingExtFrontier, sourceSet);
+        return traverseUntilIntersect(startingExtFrontier, sourceSet, destSet);
     }
 
     bool mergeIsAcyclic(NodeID u, NodeID v) {
@@ -382,29 +402,36 @@ class graphInfo{
     int numEdgesRemovedByMerge(const std::vector<NodeID>& mergeReq) {
         int totalInDegree = 0;
         int totalOutDegree = 0;
+        int mergedInDegree = 0;
+        int mergedOutDegree = 0;
         Set mergedInDegreeSet;
         Set mergedOutDegreeSet;
-
+        std::vector<NodeID> mergeReqTmp(mergeReq.begin(), mergeReq.end());
         for (const auto& id : mergeReq) {
             totalInDegree += inNeigh.at(id).size();
             totalOutDegree += outNeigh.at(id).size();
 
-            for (const auto& inNeighbor : inNeigh.at(id)) {
-                if (std::find(mergeReq.begin(), mergeReq.begin(), inNeighbor) == mergeReq.end()) {
+            // Set mergedInDegreeSet;
+            //for (const auto& inNeighbor : inNeigh.at(id)) {
+            for (const auto& inNeighbor : inNeigh[id]) {    
+                if (std::find(mergeReqTmp.begin(), mergeReqTmp.end(), inNeighbor) == mergeReqTmp.end()) {
                     mergedInDegreeSet.insert(inNeighbor);
                 }
             }
 
-            for (const auto& outNeighbor : outNeigh.at(id)) {
-                if (std::find(mergeReq.begin(), mergeReq.begin(), outNeighbor) == mergeReq.end()) {
+            // Set mergedOutDegreeSet;
+            //for (const auto& outNeighbor : outNeigh.at(id)) {
+            for (const auto& outNeighbor : outNeigh[id]) {
+                if (std::find(mergeReqTmp.begin(), mergeReqTmp.end(), outNeighbor) == mergeReqTmp.end()) {
                     mergedOutDegreeSet.insert(outNeighbor);
                 }
             }
+            // mergedInDegreeSet.clear();
+            // mergedOutDegreeSet.clear();
         }
-
-        int mergedInDegree = mergedInDegreeSet.size();
-        int mergedOutDegree = mergedOutDegreeSet.size();
-
+        mergedInDegree += mergedInDegreeSet.size();
+        mergedOutDegree += mergedOutDegreeSet.size();
+            
         return totalInDegree + totalOutDegree - (mergedInDegree + mergedOutDegree);
     }
 

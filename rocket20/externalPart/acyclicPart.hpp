@@ -33,7 +33,7 @@ void testPrintVec( std::vector<int> & v, int i )
   PRINTLIST( v );
 }
 
-void checkMemberInSet(const std::set<int>& input_set, int member) {
+void checkMemberInSet(const std::unordered_set<int>& input_set, int member) {
     bool isFound = false;
 
     for (const int& element : input_set) {
@@ -91,7 +91,7 @@ class AcyclicPart{
                 result.push_back(id);
             }
         }
-        
+        std::sort(result.begin(), result.end());
         return result;
     }
 
@@ -122,6 +122,14 @@ class AcyclicPart{
                 baseSingleInputIDs.insert(id);
             }
         }
+
+        //debug 080523
+        std::cout << "baseSingleInputIDs\n";
+        for(auto c : baseSingleInputIDs){
+            std::cout << c << ", ";
+        }
+        std::cout << std::endl;
+
         for (int childID : baseSingleInputIDs) {
             const std::vector<int>& inNeigh = mg.inNeigh[childID];
             if (!inNeigh.empty()) {
@@ -159,7 +167,13 @@ class AcyclicPart{
                 assert(std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
                     return excludeSet.find(id) == excludeSet.end();
                 }));
-                mg.mergeGroups(*(mergeReq.begin()), std::vector<int>(std::next(mergeReq.begin(),1), mergeReq.end()));
+                //DEBUG 080223
+                //mg.mergeGroups(*(mergeReq.begin()), std::vector<int>(std::next(mergeReq.begin(),1), mergeReq.end()));
+                std::vector<int> mergeReqVec(mergeReq.begin(), mergeReq.end());
+                int maxValMRV = *std::max_element(mergeReqVec.begin(), mergeReqVec.end());
+                mergeReqVec.erase(std::remove(mergeReqVec.begin(), mergeReqVec.end(), maxValMRV), mergeReqVec.end());
+                mg.mergeGroups(maxValMRV, mergeReqVec);
+
                 mergesMade.push_back(mergeReq);
             }
         }
@@ -196,6 +210,9 @@ class AcyclicPart{
 
     void mergeSmallSiblings(int smallPartCutoff = 10) {
         std::vector<NodeID> smallPartIDs = findSmallParts(smallPartCutoff);
+        // mg.outputMGMergeInfo_modfile("");
+        // mg.outputGNeighbors_modfile("");
+
         std::vector<std::pair<std::vector<NodeID>, NodeID>> inputsAndIDPairs;   //is the toSeq necessary?
         for (const auto& id : smallPartIDs) {
             std::vector<NodeID> inputsCanonicalized(mg.inNeigh[id].begin(), mg.inNeigh[id].end());
@@ -279,10 +296,10 @@ class AcyclicPart{
 
             Set orderConstrSibs;
             for (const auto& sibID : legalSiblings) {
-                // if (sibID < id) {
-                //     orderConstrSibs.insert(sibID);
-                // }
-                orderConstrSibs.insert(sibID);
+                if (sibID < id) {
+                    orderConstrSibs.insert(sibID);
+                }
+                // orderConstrSibs.insert(sibID);
             }
 
             Set myInputSet(mg.inNeigh[id].begin(), mg.inNeigh[id].end());
@@ -327,7 +344,7 @@ class AcyclicPart{
         std::cout << "\n"; // 072723 DEBUG
         // 072623 DEBUG
         //logger.info("  of " + std::to_string(smallPartIDs.size()) + " small parts " + std::to_string(mergesToConsider.size()) + " worth merging");
-        // std::cout << "\nmergesToConsider\n";
+        //std::cout << "\nmergeSmallParts_mergesToConsider\n";
         // for(auto mergeGroup: mergesToConsider){
         //     for(auto m : mergeGroup){
         //         std::cout << m << "<2>";
@@ -347,11 +364,14 @@ class AcyclicPart{
 void mergeSmallPartsDown(int smallPartCutoff = 20) {
     std::vector<int> smallPartIDs = findSmallParts(smallPartCutoff);
 
+    // mg.outputMGMergeInfo_modfile("");
+    // mg.outputGNeighbors_modfile("");
+
     Seq mergesToConsider;
     for (const auto& id : smallPartIDs) {
         Set mergeableChildren;
         for (const auto& childID : mg.outNeigh.at(id)) {
-            if (mg.mergeIsAcyclic(id, childID) && excludeSet.count(id) == 0 && clustersToKeep.count(id) == 0) {
+            if (mg.mergeIsAcyclic(id, childID) && excludeSet.count(childID) == 0 && clustersToKeep.count(childID) == 0) {
                 mergeableChildren.insert(childID);
             }
         }
@@ -360,6 +380,14 @@ void mergeSmallPartsDown(int smallPartCutoff = 20) {
             std::vector<NodeID> orderedByEdgesRemoved(mergeableChildren.begin(), mergeableChildren.end());
             // Seq tmpVec1({id, childID1});
             // Seq tmpVec2({id, childID2});
+            //DEBUG 080723
+            // std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end(),
+            //     [&](NodeID childID1, NodeID childID2) {
+            //         std::vector<NodeID> tmpVec1 = {id, childID1};
+            //         std::vector<NodeID> tmpVec2 = {id, childID2};
+            //         return mg.numEdgesRemovedByMerge(tmpVec1) < mg.numEdgesRemovedByMerge(tmpVec2);
+            //     });
+            std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end());
             std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end(),
                 [&](NodeID childID1, NodeID childID2) {
                     std::vector<NodeID> tmpVec1 = {id, childID1};
@@ -367,10 +395,32 @@ void mergeSmallPartsDown(int smallPartCutoff = 20) {
                     return mg.numEdgesRemovedByMerge(tmpVec1) < mg.numEdgesRemovedByMerge(tmpVec2);
                 });
 
+            
+            //std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end()); bug?
+
             NodeID topChoice = orderedByEdgesRemoved.back();
             mergesToConsider.push_back({id, topChoice});
         }
     }
+
+    std::cout << "\nmergeSmallPartsDown_mergesToConsider\n";
+    for(auto mergeGroup: mergesToConsider){
+        for(auto m : mergeGroup){
+            std::cout << m << "<2>";
+        }
+        std::cout << "<1>";
+    }
+    std::cout << "\n";
+
+    //debug 080523
+    std::cout << "mergeSmallPartsDown_mergesToConsider\n";
+    for(auto mgroup : mergesToConsider){
+        for(auto c : mgroup){
+            std::cout << c << "<2>";
+        }
+        std::cout << "<1>";
+    }
+    std::cout << std::endl;
 
     //logger.info("  of " + std::to_string(smallPartIDs.size()) + " small parts " + std::to_string(mergesToConsider.size()) + " worth merging down");
     Seq mergesMade = performMergesIfPossible(mergesToConsider);

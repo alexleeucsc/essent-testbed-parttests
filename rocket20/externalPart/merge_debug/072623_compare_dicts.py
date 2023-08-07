@@ -19,11 +19,11 @@ def getListOfListOfIDs(line):
         out.append(nxt)
     return out
 
-f1 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/072623_mffcdebugl")
-f2 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/072623_cpplogmsg")
+f1 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/080623_scalalogmssg")
+f2 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/080623_cpplogmsg")
 flines1 = [l for l in f1]
 flines2 = [l for l in f2]
-keyword = "mergesToConsider"
+keyword = "mergeSmallPartsDown_mergesToConsider"
 IdxList_1 = list(filter(lambda idx : flines1[idx].strip().lower() == keyword.lower(), range(len(flines1))))
 IdxList_2 = list(filter(lambda idx : flines2[idx].strip().lower() == keyword.lower(), range(len(flines2))))
 check = 0
@@ -32,6 +32,8 @@ nestList2 = getListOfListOfIDs(flines2[IdxList_2[check]+1])
 nestList1 = set([tuple(sorted(l)) for l in nestList1])
 nestList2 = set([tuple(sorted(l)) for l in nestList2])
 
+if [i in nestList1 for i in nestList2].count(False) > 0:
+    print(nestList2 - nestList1)
 
 #------------------------------get merge memebrs to convert equivilant mergeIDs------------------------------
 scala_merge = "/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/071923_mergeSmallParts_merges_scala"

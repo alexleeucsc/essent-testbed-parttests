@@ -19,11 +19,11 @@ def getListOfListOfIDs(line):
         out.append(nxt)
     return out
 
-f1 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/072723_mffcdebugl")
-f2 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/072723_cpplogmsg")
+f1 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/080623_scalalogmssg")
+f2 = open("/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/essent/080623_cpplogmsg")
 flines1 = [l for l in f1]
 flines2 = [l for l in f2]
-keyword = "mergesToConsider_choices"
+keyword = "mergeSmallPartsDown_mergesToConsider"
 IdxList_1 = list(filter(lambda idx : flines1[idx].strip().lower() == keyword.lower(), range(len(flines1))))
 IdxList_2 = list(filter(lambda idx : flines2[idx].strip().lower() == keyword.lower(), range(len(flines2))))
 check = 0
@@ -35,7 +35,7 @@ nestList2 = set([tuple(sorted(l)) for l in nestList2])
 
 #------------------------------get merge memebrs to convert equivilant mergeIDs------------------------------
 scala_merge = "/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/071923_mergeSmallParts_merges_scala"
-cpp_merge = "/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/071923_mergeSmallParts_merges_cpp"
+cpp_merge = "/soe/alexlee/alexlee/essent-testbed-document/essent-testbed-parttests/rocket20/externalPart/merge_debug/logfile_dump/080223_mergeSingleInputPartsIntoParents_merges_cpp"
 scalaLinesMerge = [l for l in open(scala_merge)]
 cppLinesMerge = [l for l in open(cpp_merge)]
 MergeIDToMembersIdxList_scala = list(filter(lambda idx : scalaLinesMerge[idx].strip().lower() == "MergeIDToMembers".lower(), range(len(scalaLinesMerge))))

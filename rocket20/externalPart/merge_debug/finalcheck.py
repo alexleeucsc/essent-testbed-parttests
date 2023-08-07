@@ -77,6 +77,14 @@ for mergeID_cpp, membs_cpp in mergeIDToMembers_cpp.items():
         print("membs not shared 2",mergeID_cpp)
         mergeID_cpp_l.append(mergeID_cpp)
 
+if len(mergeID_cpp_l)==0 and len(neigh_to_check_cpp_l)==0:
+    mismatchingIDNames = [sorted(mergeIDToMembers_cpp[s]) == sorted(mergeIDToMembers_scala[s]) for s in mergeIDToMembers_cpp]
+    if mismatchingIDNames.count(False)>0:
+        print("mismatch!")
+        print(mismatchingIDNames.count(False))
+    else:
+        print("match")
+
 #3 looks like mergeIDToMembers_cpp[64211] has members that aren't in membersToMergeID_scala on check = 1
     #it also seems like mergeIDToMembers_scala has these memebrs in their own mergeIDs
 #3.1 (assert check = 0 has exact same graphs) true

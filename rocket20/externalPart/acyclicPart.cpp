@@ -100,6 +100,6 @@ int main(){
     ap.mergeSmallSiblings(smallPartCutoff);
     ap.mergeSmallParts(smallPartCutoff, 0.5);
     ap.mergeSmallPartsDown(smallPartCutoff);
-    ap.mergeSmallParts(smallPartCutoff, 0.25);
+    ap.mergeSmallParts(2*smallPartCutoff, 0.25);
     return 0;
 }

@@ -15,7 +15,7 @@ cppLines = [l for l in open(cpp_logfile)]
 idxList_cpp = list(filter(lambda idx : cppLines[idx].strip().lower() == keyword.lower(), range(len(cppLines))))
 
 #------------------------------COMPARE INFO------------------------------
-check = 1
+check = 0
 infodict_scala = getIDToListOfIDNeigh(scalaLines[idxList_scala[check]+1])
 infodict_cpp = getIDToListOfIDNeigh(cppLines[idxList_cpp[check]+1])
 
