@@ -3,6 +3,8 @@
 #include "mffc.hpp"
 #include "acyclicPart.hpp"
 
+#include <ctime>
+
 class acyclicPart{
     public:
     graphInfo mg;
@@ -96,10 +98,34 @@ int main(){
     //start partitioning
     std::set<int> excludedSet(excluded.begin(), excluded.end());
     AcyclicPart ap = AcyclicPart(graphObj, excludedSet);
+    clock_t begin = clock();
     ap.mergeSingleInputPartsIntoParents();
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin);
+    std::cout << "acyclic 1:" << elapsed_secs << "\n";
+
+    begin = clock();
     ap.mergeSmallSiblings(smallPartCutoff);
+    end = clock();
+    elapsed_secs = double(end - begin);
+    std::cout << "acyclic 1:" << elapsed_secs << "\n";
+
+    begin = clock();
     ap.mergeSmallParts(smallPartCutoff, 0.5);
+    end = clock();
+    elapsed_secs = double(end - begin);
+    std::cout << "acyclic 1:" << elapsed_secs << "\n";
+
+    begin = clock();
     ap.mergeSmallPartsDown(smallPartCutoff);
+    end = clock();
+    elapsed_secs = double(end - begin);
+    std::cout << "acyclic 1:" << elapsed_secs << "\n";
+
+    begin = clock();
     ap.mergeSmallParts(2*smallPartCutoff, 0.25);
+    end = clock();
+    elapsed_secs = double(end - begin);
+    std::cout << "acyclic 1:" << elapsed_secs << "\n";
     return 0;
 }

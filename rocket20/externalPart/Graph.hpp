@@ -56,6 +56,21 @@ void checkMemberInMap(std::map<int, std::vector<int>>& input_map, int member) {
     std::cout << std::boolalpha << isFound << std::endl;
 }
 
+void checkMemberInVector(const std::vector<int>& vec, int member) {
+    bool isFound = false;
+
+    for (int i=0; i<vec.size(); i++) {
+        int element = vec[i];
+        if (element == member) {
+            isFound = true;
+            std::cout << isFound << " : " << i << std::endl;
+        }
+    }
+    if(!isFound){
+        std::cout << std::boolalpha << isFound << std::endl;
+    }
+}
+
 class graphInfo{
     public:
     std::vector<std::vector<int>> inNeigh;
@@ -433,6 +448,55 @@ class graphInfo{
         mergedOutDegree += mergedOutDegreeSet.size();
             
         return totalInDegree + totalOutDegree - (mergedInDegree + mergedOutDegree);
+    }
+
+    //--------------------TOPO SORT FROM G$G--------------------
+    // A recursive function used by topologicalSort
+    void topologicalSortUtil(int v, std::vector<bool>& visited,
+                                    std::vector<int>& Stack)
+    {
+        // Mark the current node as visited.
+        visited[v] = true;
+    
+        // Recur for all the vertices adjacent to this vertex
+        std::vector<int>::iterator i;
+        for (i = outNeigh[v].begin(); i != outNeigh[v].end(); ++i){
+            if (!visited[*i]){
+                //clock_t begin = clock();
+                topologicalSortUtil(*i, visited, Stack);
+                //clock_t end = clock();
+                ///double elapsed_secs = double(end - begin);
+                //std::cout << "topologicalSortUtil inner call: " << elapsed_secs << "\n";
+            }
+        }
+    
+        // Push current vertex to stack which stores result
+        Stack.push_back(v);
+    }
+    
+    // The function to do Topological Sort. It uses recursive
+    // topologicalSortUtil()
+    std::vector<int> topologicalSort()
+    {
+        std::vector<int> Stack;
+    
+        // Mark all the vertices as not visited
+        std::vector<bool> visited(outNeigh.size(), false);  //NOTE: should be fine to use outNeigh.size, but may casue bugs
+    
+        // Call the recursive helper function to store Topological
+        // Sort starting from all vertices one by one
+        for (int i = 0; i < visited.size(); i++){
+            if (visited[i] == false){
+                clock_t begin = clock();
+                topologicalSortUtil(i, visited, Stack);
+                clock_t end = clock();
+                double elapsed_secs = double(end - begin);
+                std::cout << "topologicalSortUtil call: " << elapsed_secs << "\n";
+            }
+        }
+    
+        std::reverse(Stack.begin(), Stack.end());
+        return Stack;
     }
 
 };

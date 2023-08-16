@@ -2,7 +2,6 @@
 #define ACYCLICPART_H
 
 #include "Graph.hpp"
-#include "mergeIsAcyclicTopo.hpp"
 #include <set>
 #include <unordered_set>
 #include <cassert>
@@ -13,7 +12,6 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
-#include <limits>
 
 // #define SHOW(X) std::cout << # X " = " << (X) << std::endl
 // #define PRINTLIST(vec) do { \
@@ -48,20 +46,18 @@ void checkMemberInSet(const std::unordered_set<int>& input_set, int member) {
     std::cout << std::boolalpha << isFound << std::endl;
 }
 
-// void checkMemberInVector(const std::vector<int>& vec, int member) {
-//     bool isFound = false;
+void checkMemberInVector(const std::vector<int>& vec, int member) {
+    bool isFound = false;
 
-//     for (int i=0; i<vec.size(); i++) {
-//         int element = vec[i];
-//         if (element == member) {
-//             isFound = true;
-//             std::cout << isFound << std::endl;
-//         }
-//     }
-//     if(!isFound){
-//         std::cout << std::boolalpha << isFound << std::endl;
-//     }
-// }
+    for (const int& element : vec) {
+        if (element == member) {
+            isFound = true;
+            break;
+        }
+    }
+
+    std::cout << std::boolalpha << isFound << std::endl;
+}
 
 bool checkMemberInVector_debug(const std::vector<int>& vec, int member) {
     bool isFound = false;
@@ -184,177 +180,6 @@ class AcyclicPart{
         return mergesMade;
     }
 
-    void checkTopo(std::vector<int>& topoSort, graphInfo& mg){
-        int maxNodeVal = *std::max_element(topoSort.begin(), topoSort.end());
-        std::vector<bool> nodeHasBeenChecked(maxNodeVal+1, false);
-        std::queue<int> frontier_tmp;
-        for(auto n : topoSort){
-            for(auto inN : mg.inNeigh[n]){
-                if(!nodeHasBeenChecked[inN]){
-                    std::cout << "error: topoSort wrong\n";
-                    exit(111);
-                }
-                //nodeHasBeenChecked[n] = true;
-            }
-            nodeHasBeenChecked[n] = true;
-        }
-    }
-
-    Seq performMergesIfPossibleTopo(const Seq& mergesToConsider) {
-        Seq mergesMade;
-        int topoThresh = 20;
-        //get topological sort
-        std::cout << "-0: topoSort start\n";
-        std::vector<int> topoSort = mg.topologicalSort();
-        std::cout << "0: topoSort done\n";
-
-        //verify that initial toposort is ok
-        //sanity check (will slow performance): is the new toposort still valid?
-        checkTopo(topoSort, mg);
-        //sanity check end
-
-        int maxNodeVal = *std::max_element(topoSort.begin(), topoSort.end());
-        std::vector<int> nodeToTopoIdx(maxNodeVal+1);
-        for(int i=0; i<maxNodeVal; i++){
-            nodeToTopoIdx[topoSort[i]] = i;
-        }
-        //get short and long merges
-        Seq mergesToConsiderShort;
-        //std::vector<std::tuple<int,int>> mergeShortIdxPair;      BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated!
-        Seq mergesToConsiderLong;
-        for(auto mergeGroup : mergesToConsider){
-            int minIdx = std::numeric_limits<int>::max();
-            int maxIdx = std::numeric_limits<int>::min();
-            for(auto node : mergeGroup){
-                minIdx = std::min(minIdx, nodeToTopoIdx[node]);
-                maxIdx = std::max(maxIdx, nodeToTopoIdx[node]);
-            }
-            if(maxIdx-minIdx > topoThresh){
-                mergesToConsiderShort.push_back(mergeGroup);
-                //mergeShortIdxPair.push_back(std::tuple<int,int>({maxIdx,minIdx}));  BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated!
-            }else{
-                mergesToConsiderLong.push_back(mergeGroup);
-            }
-        }
-        std::cout << "1: found mergesToConsiderShort/Long found\n";
-        //do short merges with merge+topo
-        for (int i=0; i<mergesToConsiderShort.size(); i++) { 
-            std::cout << "shortmergeDone\n";
-            auto mergeReq = mergesToConsiderShort[i];
-            //auto mergeReqIdx = mergeShortIdxPair[i];  BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated!
-            int minIdx = std::numeric_limits<int>::max();           //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-            int maxIdx = std::numeric_limits<int>::min();           //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-            for(auto node : mergeReq){                              //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-                minIdx = std::min(minIdx, nodeToTopoIdx[node]);     //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-                maxIdx = std::max(maxIdx, nodeToTopoIdx[node]);     //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-            }                                                       //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-            std::tuple<int,int> mergeReqIdx({minIdx,maxIdx});       //BUG 081523 : mergeShortIdxPair changes as mergesd aer accepted and topoSort is mutated
-            assert(mergeReq.size() > 1);
-            bool partsStillExist = true;
-            for (const auto& id : mergeReq) {
-                if (mg.mergeIDToMembers.find(id) == mg.mergeIDToMembers.end()) {
-                    partsStillExist = false;
-                    break;
-                }
-            }
-            std::tuple<bool, std::vector<int>> cyclicBool_newTopo = mergeIsAcyclicTopo(  std::set<int>(mergeReq.begin(), mergeReq.end()),
-                                                                                            nodeToTopoIdx,
-                                                                                            topoSort,
-                                                                                            mg.outNeigh,
-                                                                                            mg.mergeIDToMembers);
-            //sanity check: did mergeIsAcyclic get it right?
-            bool isAcyclic = mg.mergeIsAcyclic(Set(mergeReq.begin(), mergeReq.end()));
-            if(std::get<0>(cyclicBool_newTopo) != isAcyclic){
-                std::cout << "cycle val not right\n";
-                exit(111);
-            }
-            //if possible, do merge:
-            if (partsStillExist && std::get<0>(cyclicBool_newTopo)) {
-                if(!std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
-                    return excludeSet.find(id) == excludeSet.end();})){
-                        std::cout << "error: mergeReq in exclude set";
-                    }
-                assert(std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
-                    return excludeSet.find(id) == excludeSet.end();
-                }));
-                //mg.mergeGroups(*(mergeReq.begin()), std::vector<int>(std::next(mergeReq.begin(),1), mergeReq.end()));
-                int maxMergeReqNode = *std::max_element(mergeReq.begin(), mergeReq.end());
-                std::vector<int> mergeDestRemain;
-                for(auto n : mergeReq){
-                    if (n != maxMergeReqNode){
-                        mergeDestRemain.push_back(n);
-                    }
-                }
-                mg.mergeGroups(maxMergeReqNode, mergeDestRemain);
-                mergesMade.push_back(mergeReq);
-                //update topoSort (slow O(n) version)
-                //update topoSort by slicing and appending
-                std::cout << std::get<0>(mergeReqIdx) << " , " << std::get<1>(mergeReqIdx) << std::endl;
-                std::vector<int> firstHalf = std::vector<int>(topoSort.begin(), topoSort.begin()+std::get<0>(mergeReqIdx));
-                std::vector<int> secondHalf = std::vector<int>(topoSort.begin()+std::get<1>(mergeReqIdx)+1, topoSort.end());
-                std::vector<int> newTopo;
-                newTopo.insert(newTopo.end(), firstHalf.begin(), firstHalf.end());
-                newTopo.insert(newTopo.end(), std::get<1>(cyclicBool_newTopo).begin(), std::get<1>(cyclicBool_newTopo).end());
-                newTopo.insert(newTopo.end(), secondHalf.begin(), secondHalf.end());
-                // topoSort = newTopo;
-
-                //sanity check (will slow performance): is the new newTopo still valid?
-                int maxNodeVal = *std::max_element(newTopo.begin(), newTopo.end());
-                std::vector<int> nodeHasBeenChecked(maxNodeVal+1, false);
-                std::queue<int> frontier_tmp;
-                for(auto n : newTopo){
-                    for(auto inN : mg.inNeigh[n]){
-                        if(!nodeHasBeenChecked[inN] & mg.mergeIDToMembers.find(inN) != mg.mergeIDToMembers.end() & mg.mergeIDToMembers.find(n) != mg.mergeIDToMembers.end()){
-                            std::cout << "error: newTopo wrong (2)\n";
-                            exit(111);
-                        }
-                        //nodeHasBeenChecked[n] = true;
-                    }
-                    nodeHasBeenChecked[n] = true;
-                }
-                //assign newTopo
-                topoSort = newTopo;
-                //update nodeToTopoIdx
-                //TODO: 081623: 1: THIS IS FOR NON O(n) VERSION OF NEWTOPO!!!
-                // for(int i=0; i<std::get<1>(cyclicBool_newTopo).size();i++){
-                //     nodeToTopoIdx[std::get<1>(cyclicBool_newTopo)[i]] = std::get<0>(mergeReqIdx) + i;
-                // }
-                //081723: this just for debugging: will be very slow...
-                for(int i=0; i<topoSort.size();i++){
-                    nodeToTopoIdx[topoSort[i]] = i;
-                }
-                //sanity check end
-
-            }
-        }
-        //do long merges
-        std::cout << "2: shortMerges done\n";
-        for (const auto& mergeReq : mergesToConsiderLong) { 
-            std::cout << "longmergeDone\n";
-            assert(mergeReq.size() > 1);
-            bool partsStillExist = true;
-            for (const auto& id : mergeReq) {
-                if (mg.mergeIDToMembers.find(id) == mg.mergeIDToMembers.end()) {
-                    partsStillExist = false;
-                    break;
-                }
-            }
-            if (partsStillExist && mg.mergeIsAcyclic(Set(mergeReq.begin(), mergeReq.end()))) {
-                if(!std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
-                    return excludeSet.find(id) == excludeSet.end();})){
-                        std::cout << "error: mergeReq in exclude set (long)";
-                    }
-                assert(std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
-                    return excludeSet.find(id) == excludeSet.end();
-                }));
-                mg.mergeGroups(*(mergeReq.begin()), std::vector<int>(std::next(mergeReq.begin(),1), mergeReq.end()));
-                mergesMade.push_back(mergeReq);
-            }
-        }
-        return mergesMade;
-        std::cout << "3: LongMerges done\n";
-    }
-
     struct VectorHash {
         size_t operator()(const std::vector<int>& vec) const {
             std::hash<int> hasher;
@@ -430,8 +255,8 @@ class AcyclicPart{
         // myfile_merge2con << "\n";
         // myfile_merge2con.close();
 
-        //std::vector<std::unordered_set<int>> mergesMade = performMergesIfPossible(mergesToConsider);
-        std::vector<std::unordered_set<int>> mergesMade = performMergesIfPossibleTopo(mergesToConsider);
+        std::vector<std::unordered_set<int>> mergesMade = performMergesIfPossible(mergesToConsider);
+
         if (!mergesMade.empty()) {
             mergeSmallSiblings(smallPartCutoff);
         }
