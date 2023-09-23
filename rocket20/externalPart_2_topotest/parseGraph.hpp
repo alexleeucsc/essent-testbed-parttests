@@ -218,6 +218,27 @@ void outputMGMergeInfo(graphInfo mg){
 }
 
 
-
+void outputMGNeighborsDebug(graphInfo mg){
+    std::ofstream myfile;
+    myfile.open ("debuggraphinfo");
+    myfile << "InNeigh:";
+    for(auto incomingNodes : mg.inNeigh){
+      for(auto member : incomingNodes){
+        myfile << member << "<2>";
+      }
+      myfile << "<1>";
+    }
+    myfile << "\n";
+    myfile << "OutNeigh:";
+    for(auto outgoingNodes : mg.outNeigh){
+      for(auto member : outgoingNodes){
+        myfile << member << "<2>";
+      }
+      myfile << "<1>";
+    }
+    myfile << "\n";
+    myfile.flush();
+    myfile.close();
+}
 
 #endif

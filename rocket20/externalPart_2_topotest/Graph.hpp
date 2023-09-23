@@ -109,6 +109,44 @@ int searchGraphlike(std::vector<std::vector<int>>& input_map, int member) {
     return distFromStart;
 }
 
+
+int dbgfilter1_searchGraphlike(std::vector<std::vector<int>>& input_map, int member, std::vector<int>& dists, int expDistFilter) {
+    
+    std::deque<int> frontier{member};
+    std::vector<bool> visited(input_map.size()+10, false);
+    std::deque<int> newFrontier;
+    int distFromStart = 0;
+    bool firstIter = true;
+    while(frontier.size() > 0 || firstIter){
+        firstIter = false;
+        distFromStart++;
+        expDistFilter--;
+        while(frontier.size() > 0){
+            int toProc = frontier.front();
+            frontier.pop_front();
+            for(auto neigh : input_map[toProc]){
+                if(!visited[neigh]){
+                    newFrontier.push_back(neigh);
+                    visited[neigh] = true;
+                }
+            }
+        }
+        frontier = newFrontier;
+        std::cout << "distFromStart=" << distFromStart << ": ";
+        for(auto f : frontier){
+            if(dists[f] == expDistFilter){
+                std::cout << f << ", ";
+            }
+        }
+        std::cout <<"\n";
+        newFrontier.clear();
+    }
+
+    std::cout << "member is in values"<< std::endl;
+    return distFromStart;
+}
+
+
 bool searchGraphlike(std::vector<std::vector<int>>& input_map, int member, int target) {
     
     std::deque<int> frontier{member};

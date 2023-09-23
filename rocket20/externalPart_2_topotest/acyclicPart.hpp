@@ -253,6 +253,61 @@ class AcyclicPart{
         }
         return mergesMade;
     }
+    Seq performMergesCheckFreeLayerDebug(const Seq& mergesToConsider) {
+        Seq mergesMade;
+        int debugIdx = 0;
+        for (const auto& mergeReq : mergesToConsider) { 
+            debugIdx++;
+            // std::tuple<std::vector<std::vector<int>>, std::vector<int>>  layerList_dists = mg.layerList();
+            // std::vector<std::vector<int>> layerList = std::get<0>(layerList_dists);
+            // std::vector<int> dists = std::get<1>(layerList_dists);
+            // if(debugIdx == 3){
+            //     outputMGNeighborsDebug(mg);
+            // }
+            // if(dists[61365] != 11){
+            //     std::cout<<"special case exit";
+            //     outputMGNeighborsDebug(mg);
+            //     // exit(111);
+            // }
+            if(debugMergeReqSize){
+                std::cout << "mergeReq size:" << mergeReq.size() << std::endl;
+            }
+            assert(mergeReq.size() > 1);
+            bool partsStillExist = true;
+            for (const auto& id : mergeReq) {
+                if (mg.mergeIDToMembers.find(id) == mg.mergeIDToMembers.end()) {
+                    partsStillExist = false;
+                    break;
+                }
+            }
+            if (partsStillExist) {
+                std::vector<int> mergeReqVecTmp(mergeReq.begin(), mergeReq.end());
+                // if(! (dists[mergeReqVecTmp[0]] - dists[mergeReqVecTmp[1]] == -1 || dists[mergeReqVecTmp[0]] - dists[mergeReqVecTmp[1]] == 1 )){
+                //     std::cout<<"layering broken";
+                //     exit(111);
+                // }
+                // if(!mg.mergeIsAcyclic(Set(mergeReq.begin(), mergeReq.end()))){
+                //     std::cout<<"PROBLEM!!!\n";
+                // }
+                if(!std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
+                    return !excludeSet[id];})){
+                        //std::cout << "error";
+                    }
+                assert(std::all_of(mergeReq.begin(), mergeReq.end(), [&](NodeID id) {
+                    return !excludeSet[id];
+                }));
+                //DEBUG 080223
+                //mg.mergeGroups(*(mergeReq.begin()), std::vector<int>(std::next(mergeReq.begin(),1), mergeReq.end()));
+                std::vector<int> mergeReqVec(mergeReq.begin(), mergeReq.end());
+                int maxValMRV = *std::max_element(mergeReqVec.begin(), mergeReqVec.end());
+                mergeReqVec.erase(std::remove(mergeReqVec.begin(), mergeReqVec.end(), maxValMRV), mergeReqVec.end());
+                mg.mergeGroups(maxValMRV, mergeReqVec);
+
+                mergesMade.push_back(mergeReq);
+            }
+        }
+        return mergesMade;
+    }
     Seq performMergesIfPossibleLimited(Seq& mergesToConsider) {
         Seq mergesMade;
         //process all mergeReqs, fill up mergeReqs not made to memoize on...
@@ -1420,6 +1475,136 @@ void mergeSmallPartsLayeredDown(int smallPartCutoff = 20, double mergeThreshold 
                 dists[childID] == dists[id] + 1 
                 )
                 {
+                    // if((id == 11365 || id == 11365) && (childID == 13445 || childID == 13445)){
+                    //     std::cout<<"special case break";
+                    // }
+                    mergeableChildren.push_back(childID);
+            }
+        }
+        //std::cout << "\n";
+
+        if (!mergeableChildren.empty()) {
+            std::vector<NodeID> orderedByEdgesRemoved(mergeableChildren.begin(), mergeableChildren.end());
+            // Seq tmpVec1({id, childID1});
+            // Seq tmpVec2({id, childID2});
+            //DEBUG 080723
+            // std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end(),
+            //     [&](NodeID childID1, NodeID childID2) {
+            //         std::vector<NodeID> tmpVec1 = {id, childID1};
+            //         std::vector<NodeID> tmpVec2 = {id, childID2};
+            //         return mg.numEdgesRemovedByMerge(tmpVec1) < mg.numEdgesRemovedByMerge(tmpVec2);
+            //     });
+            // std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end());
+            std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end(),
+                [&](NodeID childID1, NodeID childID2) {
+                    std::vector<NodeID> tmpVec1 = {id, childID1};
+                    std::vector<NodeID> tmpVec2 = {id, childID2};
+                    return mg.numEdgesRemovedByMerge(tmpVec1) < mg.numEdgesRemovedByMerge(tmpVec2);
+                });
+
+            
+            //std::sort(orderedByEdgesRemoved.begin(), orderedByEdgesRemoved.end()); bug?
+
+            NodeID topChoice = orderedByEdgesRemoved.back();
+            mergesToConsider.push_back({id, topChoice});
+        }
+    }
+
+    // std::tuple<std::vector<std::vector<int>>, std::vector<int>>  layerList_dists2 = mg.layerList();
+    // std::vector<std::vector<int>> layerList2 = std::get<0>(layerList_dists2);
+    // std::vector<int> dists2 = std::get<1>(layerList_dists2);
+
+    std::sort(mergesToConsider.begin(), mergesToConsider.end(),
+        [&](std::vector<int> id1, std::vector<int> id2) {
+            return dists[id1[0]] > dists[id2[0]];
+        });
+
+    //std::cout << "\nmergeSmallPartsDown_mergesToConsider\n";
+    for(auto mergeGroup: mergesToConsider){
+        for(auto m : mergeGroup){
+            //std::cout << m << "<2>";
+        }
+        //std::cout << "<1>";
+    }
+    //std::cout << "\n";
+
+    //debug 080523
+    //std::cout << "mergeSmallPartsDown_mergesToConsider\n";
+    for(auto mgroup : mergesToConsider){
+        for(auto c : mgroup){
+            //std::cout << c << "<2>";
+        }
+        //std::cout << "<1>";
+    }
+    //std::cout << std::endl;
+
+    //iter through mergeReq, remove following nodes with illegal chidlren
+    std::vector<bool> illegalChildren(mg.outNeigh.size());
+    std::vector<std::vector<int>> mergesToConsiderFilter;
+    int currentLayerChecking = -1;
+    if(mergesToConsider.size()>0){
+        currentLayerChecking = dists[mergesToConsider[0][0]];
+    }
+    for(auto mergeReq : mergesToConsider){
+        if((mergeReq[0] == 11365 || mergeReq[1] == 11365) && (mergeReq[0] == 13455 || mergeReq[1] == 13455)){
+            std::cout<<"special case break";
+        }
+        bool legal = true;
+        if(dists[mergeReq[0]] != currentLayerChecking){
+            currentLayerChecking = dists[mergeReq[0]];
+            //illegalChildren.clear();
+        }
+        // for(auto child : mg.outNeigh[mergeReq[0]]){
+        //     if (!illegalChildren[child]){
+        //         illegalChildren[child] = true;
+        //     } else {
+        //         legal = false;
+        //     }
+        // }
+            if (!illegalChildren[mergeReq[1]]){
+                for(auto child : mg.outNeigh[mergeReq[0]]){
+                    illegalChildren[child] = true;
+                }
+                illegalChildren[mergeReq[0]] = true;
+            } else {
+                legal = false;
+            }
+        if(legal){
+            mergesToConsiderFilter.push_back(mergeReq);
+        }
+    }
+    Seq mergesToConsiderSets;
+    for(auto mergeReq : mergesToConsiderFilter){
+        mergesToConsiderSets.push_back(std::set<int>(mergeReq.begin(), mergeReq.end()));
+    }
+
+    //logger.info("  of " + std::to_string(smallPartIDs.size()) + " small parts " + std::to_string(mergesToConsider.size()) + " worth merging down");
+    std::cout << "mergeSmallPartsLayeredDown: found parts:" << mergesToConsider.size() << "out of " << smallPartIDs.size() << "\n";
+    Seq mergesMade = performMergesCheckFreeLayerDebug(mergesToConsiderSets);
+    std::cout << "merges made: " << mergesMade.size() << "\n";
+    if (mergesMade.size() > 5) {
+        mergeSmallPartsLayeredDown(smallPartCutoff);
+    }
+}
+void mergeSmallPartsLayeredDown2(int smallPartCutoff = 20, double mergeThreshold = 0.5) {
+    std::vector<int> smallPartIDs = findSmallParts(smallPartCutoff);
+    std::tuple<std::vector<std::vector<int>>, std::vector<int>>  layerList_dists = mg.layerList();
+    std::vector<std::vector<int>> layerList = std::get<0>(layerList_dists);
+    std::vector<int> dists = std::get<1>(layerList_dists);
+    // mg.outputMGMergeInfo_modfile("");
+    // mg.outputGNeighbors_modfile("");
+
+    std::vector<std::vector<int>> mergesToConsider;
+    for (const auto& id : smallPartIDs) {
+        std::vector<int> mergeableChildren;
+        for (const auto& childID : mg.outNeigh.at(id)) {
+            if (
+                //mg.mergeIsAcyclic(id, childID) &&
+                !excludeSet[childID] &&
+                !clustersToKeep[childID] &&
+                dists[childID] == dists[id] + 1 
+                )
+                {
                     mergeableChildren.push_back(childID);
             }
         }
@@ -1477,8 +1662,8 @@ void mergeSmallPartsLayeredDown(int smallPartCutoff = 20, double mergeThreshold 
     //std::cout << std::endl;
 
     //iter through mergeReq, remove following nodes with illegal chidlren
-    std::vector<bool> illegalChildren(mg.outNeigh.size());
-    std::vector<std::vector<int>> mergesToConsiderFilter;
+    std::map<int,int> childToCurrentHead;
+    std::map<int, std::vector<int>> headToMergesToConsiderFilter;
     int currentLayerChecking = -1;
     if(mergesToConsider.size()>0){
         currentLayerChecking = dists[mergesToConsider[0][0]];
@@ -1489,19 +1674,34 @@ void mergeSmallPartsLayeredDown(int smallPartCutoff = 20, double mergeThreshold 
             currentLayerChecking = dists[mergeReq[0]];
             //illegalChildren.clear();
         }
+        //1: check if any child has already been "claimed"
+        bool mergeOverlaps = false;
+        int overlappingHead = -1;
         for(auto child : mg.outNeigh[mergeReq[0]]){
-            if (!illegalChildren[child]){
-                illegalChildren[child] = true;
-            } else {
-                legal = false;
+            if(childToCurrentHead.find(child) != childToCurrentHead.end()){
+                mergeOverlaps = true;
+                overlappingHead = childToCurrentHead[child];
+                break;
             }
         }
-        if(legal){
-            mergesToConsiderFilter.push_back(mergeReq);
+        //2: if not, claim children and put in new mergeReq
+        if(!mergeOverlaps){
+            for(auto child : mg.outNeigh[mergeReq[0]]){
+                childToCurrentHead[child] = mergeReq[0];
+            }
+            headToMergesToConsiderFilter[mergeReq[0]] = mergeReq;
+        }else{
+            //3: if it has, make new head claim children
+            for(auto child : mg.outNeigh[mergeReq[0]]){
+                childToCurrentHead[child] = overlappingHead;
+            }
+            //find the head of the overlapping req and attatch new request
+            headToMergesToConsiderFilter[overlappingHead].insert(headToMergesToConsiderFilter[overlappingHead].end(),mergeReq.begin(),mergeReq.end());
         }
     }
     Seq mergesToConsiderSets;
-    for(auto mergeReq : mergesToConsiderFilter){
+    for(auto mergeReqPair : headToMergesToConsiderFilter){
+        auto mergeReq = mergeReqPair.second;
         mergesToConsiderSets.push_back(std::set<int>(mergeReq.begin(), mergeReq.end()));
     }
 
@@ -1513,7 +1713,6 @@ void mergeSmallPartsLayeredDown(int smallPartCutoff = 20, double mergeThreshold 
         mergeSmallPartsLayeredDown(smallPartCutoff);
     }
 }
-
 
     void smallSiblingsTimeTest(int smallPartCutoff = 20, double mergeThreshold = 0.5) {
         //std::vector<int> smallPartIDs = findSmallParts(smallPartCutoff);

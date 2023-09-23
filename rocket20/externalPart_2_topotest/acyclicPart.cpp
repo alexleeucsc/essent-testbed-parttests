@@ -148,6 +148,17 @@ int main(int argc, char* argv[]){
     std::cout << "\n";
     if(ap.mg.isCyclic()){std::cout<<"problem\n";exit(111);}
 
+    begin = clock();
+    ap.mergeSmallPartsLayeredDown();
+    end = clock();
+    elapsed_secs = double(end - begin);
+    std::cout << "mergeSmallPartsLayeredDown 1:" << elapsed_secs << "\n";
+    std::cout << "mergeSmallPartsLayeredDown clust count:" << ap.mg.mergeIDToMembers.size();
+    std::cout << "\n";
+    std::cout << "\n";
+    if(ap.mg.isCyclic()){std::cout<<"problem\n";exit(111);}
+    //exit(111);
+
     // for(int src=0; src<ap.mg.outNeigh.size(); src++){
     //     for(int dest=0; dest<ap.mg.outNeigh.size(); dest++){
     //         clock_t begin = clock();
@@ -179,7 +190,7 @@ int main(int argc, char* argv[]){
     // }
 
     // begin = clock();
-    // ap.mergeSmallPartsLayeredDown();
+    // ap.mergeSmallPartsLayeredDown2();
     // end = clock();
     // elapsed_secs = double(end - begin);
     // std::cout << "mergeSmallPartsLayeredDown 1:" << elapsed_secs << "\n";
